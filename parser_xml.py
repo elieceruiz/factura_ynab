@@ -21,6 +21,10 @@ def leer_factura(xml_file):
     except ET.ParseError:
         # no es una factura válida
         return [], None, None
+    
+    # verificar que sea factura DIAN
+    if invoice_root.find(".//{*}InvoiceLine") is None:
+        return [], None, None
 
     # obtener fecha de la factura
     fecha_node = invoice_root.find(".//{*}IssueDate")
