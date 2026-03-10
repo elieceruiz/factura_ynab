@@ -13,9 +13,10 @@ archivo = st.file_uploader("Sube factura XML")
 
 if archivo:
 
-    items, fecha = leer_factura(archivo)
+    items, fecha, proveedor = leer_factura(archivo)
 
     st.write("Fecha factura:", fecha)
+    st.write("Proveedor:", proveedor)
 
     categorias = traer_categorias()
 
@@ -66,9 +67,10 @@ if archivo:
             crear_transaccion(
                 ACCOUNT_ID,
                 s["categoria_id"],
-                s["producto"],
+                proveedor,        # PAYEE real
                 s["precio"],
-                fecha
+                fecha,
+                s["producto"]     # MEMO con el producto
             )
 
             productos.update_one(
