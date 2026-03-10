@@ -30,7 +30,7 @@ def traer_categorias():
     return categorias
 
 
-def crear_transaccion(account_id, categoria_id, payee, amount, fecha):
+def crear_transaccion(account_id, categoria_id, payee, amount, fecha, memo):
 
     url = f"https://api.ynab.com/v1/budgets/{BUDGET}/transactions"
 
@@ -40,6 +40,7 @@ def crear_transaccion(account_id, categoria_id, payee, amount, fecha):
             "date": fecha,
             "amount": -int(amount * 1000),
             "payee_name": payee,
+            "memo": memo,
             "category_id": categoria_id
         }
     }
