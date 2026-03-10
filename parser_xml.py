@@ -16,7 +16,11 @@ def leer_factura(xml_file):
     descripcion = descripcion_node.text.strip()
 
     # parsear la factura real
-    invoice_root = ET.fromstring(descripcion)
+    try:
+        invoice_root = ET.fromstring(descripcion)
+    except ET.ParseError:
+        # no es una factura válida
+        return [], None, None
 
     # obtener fecha de la factura
     fecha_node = invoice_root.find(".//{*}IssueDate")
