@@ -72,7 +72,7 @@ if archivo:
             "categoria_id": mapa_cat[categoria]
         })
 
-    if st.button("Enviar factura a YNAB"):
+    if st.button("🚀 Enviar factura a YNAB", use_container_width=True):
 
         for s in seleccion:
 
