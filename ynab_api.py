@@ -10,7 +10,6 @@ BUDGET = st.secrets["BUDGET_ID"]
 def traer_categorias():
 
     url = f"https://api.ynab.com/v1/budgets/{BUDGET}/categories"
-
     headers = {"Authorization": f"Bearer {TOKEN}"}
 
     r = requests.get(url, headers=headers).json()
@@ -18,15 +17,17 @@ def traer_categorias():
     categorias = []
 
     for group in r["data"]["category_groups"]:
+
         for cat in group["categories"]:
+
             if not cat["deleted"]:
+
                 categorias.append({
-                    "nombre": cat["name"],
+                    "nombre": f"{group['name']} → {cat['name']}",
                     "id": cat["id"]
                 })
 
     return categorias
-
 
 def crear_transaccion(account_id, categoria_id, payee, amount):
 
