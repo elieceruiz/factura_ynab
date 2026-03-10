@@ -11,7 +11,8 @@ archivo = st.file_uploader("Sube factura XML")
 
 if archivo:
 
-    items = leer_factura(archivo)
+    items, fecha = leer_factura(archivo)
+    st.write("Fecha factura:", fecha)
 
     categorias = traer_categorias()
 
