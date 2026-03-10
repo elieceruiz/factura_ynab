@@ -247,4 +247,4 @@ if archivo:
             )
 
         # Confirmación visual
-        st.success("Factura enviada a YNAB"
+        st.success("Factura enviada a YNAB")
