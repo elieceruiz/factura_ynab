@@ -1,13 +1,7 @@
-# parser_xml.py
-
 import xml.etree.ElementTree as ET
 
 
 def leer_factura(xml_file):
-
-    # --------------------------------------
-    # PARSEAR XML PRINCIPAL
-    # --------------------------------------
 
     try:
         tree = ET.parse(xml_file)
@@ -16,21 +10,14 @@ def leer_factura(xml_file):
         return [], None, None, None
 
 
-    # --------------------------------------
-    # SI YA ES UNA FACTURA (Invoice directo)
-    # --------------------------------------
-
     if "Invoice" in root.tag:
         invoice_root = root
-
     else:
 
         descripcion = None
 
         for node in root.findall(".//{*}Description"):
-
             texto = node.text
-
             if texto and "<Invoice" in texto:
                 descripcion = texto
                 break
@@ -38,9 +25,7 @@ def leer_factura(xml_file):
         if not descripcion:
             return [], None, None, None
 
-
         descripcion = descripcion.strip()
-
         inicio = descripcion.find("<Invoice")
 
         if inicio == -1:
@@ -48,36 +33,22 @@ def leer_factura(xml_file):
 
         descripcion = descripcion[inicio:]
 
-
         try:
             invoice_root = ET.fromstring(descripcion)
         except ET.ParseError:
             return [], None, None, None
 
 
-    # --------------------------------------
-    # VERIFICAR QUE SEA FACTURA
-    # --------------------------------------
-
     if invoice_root.find(".//{*}InvoiceLine") is None:
         return [], None, None, None
 
 
-    # --------------------------------------
-    # FECHA
-    # --------------------------------------
-
     fecha = None
-
     fecha_node = invoice_root.find(".//{*}IssueDate")
 
     if fecha_node is not None and fecha_node.text:
         fecha = fecha_node.text.strip()
 
-
-    # --------------------------------------
-    # PROVEEDOR
-    # --------------------------------------
 
     proveedor = "Proveedor desconocido"
 
@@ -89,10 +60,6 @@ def leer_factura(xml_file):
     if supplier_node is not None and supplier_node.text:
         proveedor = supplier_node.text.strip()
 
-
-    # --------------------------------------
-    # EXTRAER ITEMS
-    # --------------------------------------
 
     items = []
 
@@ -106,46 +73,37 @@ def leer_factura(xml_file):
         if producto is not None and producto.text:
             nombre_producto = producto.text.strip()
 
-
-        # --------------------------------------
-        # CANTIDAD
-        # --------------------------------------
-
         try:
             cantidad_valor = float(cantidad.text)
         except:
             cantidad_valor = 1
 
 
-        # --------------------------------------
-        # PRECIO (robusto)
-        # --------------------------------------
-
         precio_valor = 0
 
-        # 1️⃣ TOTAL DE LA LÍNEA (precio × cantidad)
-        precio_node = line.find(".//{*}LineExtensionAmount")
+        # 1️⃣ subtotal línea (correcto para la mayoría)
+        subtotal_node = line.find(".//{*}LineExtensionAmount")
 
-        if precio_node is not None and precio_node.text:
+        if subtotal_node is not None and subtotal_node.text:
             try:
-                precio_valor = float(precio_node.text)
+                precio_valor = float(subtotal_node.text)
             except:
                 precio_valor = 0
 
         else:
 
-            # 2️⃣ PRECIO UNITARIO
+            # 2️⃣ precio unitario
             precio_node = line.find(".//{*}PriceAmount")
 
             if precio_node is not None and precio_node.text:
                 try:
-                    precio_valor = float(precio_node.text) * cantidad_valor
+                    precio_valor = float(precio_node.text)
                 except:
                     precio_valor = 0
 
             else:
 
-                # 3️⃣ POS RARO (algunos supermercados)
+                # 3️⃣ fallback POS
                 precio_node = line.find(".//{*}Note[@languageLocaleID='linea1']")
 
                 if precio_node is not None and precio_node.text:
@@ -162,10 +120,6 @@ def leer_factura(xml_file):
         })
 
 
-    # --------------------------------------
-    # TOTAL REAL DE LA FACTURA
-    # --------------------------------------
-
     total_factura = None
 
     total_node = invoice_root.find(".//{*}PayableAmount")
@@ -176,9 +130,5 @@ def leer_factura(xml_file):
         except:
             total_factura = None
 
-
-    # --------------------------------------
-    # RESULTADO FINAL
-    # --------------------------------------
 
     return items, fecha, proveedor, total_factura
