@@ -1,5 +1,3 @@
-# parser_xml.py
-
 import xml.etree.ElementTree as ET
 
 
@@ -13,7 +11,7 @@ def leer_factura(xml_file):
         tree = ET.parse(xml_file)
         root = tree.getroot()
     except ET.ParseError:
-        return [], None, None
+        return [], None, None, None
 
 
     # --------------------------------------
@@ -40,7 +38,7 @@ def leer_factura(xml_file):
                 break
 
         if not descripcion:
-            return [], None, None
+            return [], None, None, None
 
 
         # --------------------------------------
@@ -52,7 +50,7 @@ def leer_factura(xml_file):
         inicio = descripcion.find("<Invoice")
 
         if inicio == -1:
-            return [], None, None
+            return [], None, None, None
 
         descripcion = descripcion[inicio:]
 
@@ -64,7 +62,7 @@ def leer_factura(xml_file):
         try:
             invoice_root = ET.fromstring(descripcion)
         except ET.ParseError:
-            return [], None, None
+            return [], None, None, None
 
 
     # --------------------------------------
@@ -72,7 +70,7 @@ def leer_factura(xml_file):
     # --------------------------------------
 
     if invoice_root.find(".//{*}InvoiceLine") is None:
-        return [], None, None
+        return [], None, None, None
 
 
     # --------------------------------------
@@ -119,18 +117,15 @@ def leer_factura(xml_file):
         if producto is not None and producto.text:
             nombre_producto = producto.text.strip()
 
-
         try:
             precio_valor = float(precio.text)
         except:
             precio_valor = 0
 
-
         try:
             cantidad_valor = float(cantidad.text)
         except:
             cantidad_valor = 1
-
 
         items.append({
             "producto": nombre_producto,
@@ -140,7 +135,22 @@ def leer_factura(xml_file):
 
 
     # --------------------------------------
+    # TOTAL REAL DE LA FACTURA
+    # --------------------------------------
+
+    total_factura = None
+
+    total_node = invoice_root.find(".//{*}PayableAmount")
+
+    if total_node is not None and total_node.text:
+        try:
+            total_factura = float(total_node.text)
+        except:
+            total_factura = None
+
+
+    # --------------------------------------
     # RESULTADO FINAL
     # --------------------------------------
 
-    return items, fecha, proveedor
+    return items, fecha, proveedor, total_factura
