@@ -23,10 +23,6 @@ def leer_factura(xml_file):
 
     else:
 
-        # --------------------------------------
-        # BUSCAR EL DESCRIPTION QUE CONTENGA LA FACTURA
-        # --------------------------------------
-
         descripcion = None
 
         for node in root.findall(".//{*}Description"):
@@ -41,10 +37,6 @@ def leer_factura(xml_file):
             return [], None, None, None
 
 
-        # --------------------------------------
-        # LIMPIAR CDATA
-        # --------------------------------------
-
         descripcion = descripcion.strip()
 
         inicio = descripcion.find("<Invoice")
@@ -54,10 +46,6 @@ def leer_factura(xml_file):
 
         descripcion = descripcion[inicio:]
 
-
-        # --------------------------------------
-        # PARSEAR FACTURA REAL
-        # --------------------------------------
 
         try:
             invoice_root = ET.fromstring(descripcion)
@@ -109,7 +97,6 @@ def leer_factura(xml_file):
     for line in invoice_root.findall(".//{*}InvoiceLine"):
 
         producto = line.find(".//{*}Description")
-        precio = line.find(".//{*}LineExtensionAmount")
         cantidad = line.find(".//{*}InvoicedQuantity")
 
         nombre_producto = "UNKNOWN"
@@ -117,15 +104,50 @@ def leer_factura(xml_file):
         if producto is not None and producto.text:
             nombre_producto = producto.text.strip()
 
-        try:
-            precio_valor = float(precio.text)
-        except:
-            precio_valor = 0
+
+        # --------------------------------------
+        # PRECIO (robusto)
+        # --------------------------------------
+
+        precio_valor = 0
+
+        # 1️⃣ Precio POS (supermercados)
+        precio_node = line.find(".//{*}Note[@languageLocaleID='linea1']")
+
+        if precio_node is not None and precio_node.text:
+            try:
+                precio_valor = float(precio_node.text)
+            except:
+                precio_valor = 0
+
+        else:
+
+            # 2️⃣ Precio sin impuestos
+            precio_node = line.find(".//{*}LineExtensionAmount")
+
+            if precio_node is not None and precio_node.text:
+                try:
+                    precio_valor = float(precio_node.text)
+                except:
+                    precio_valor = 0
+
+            else:
+
+                # 3️⃣ Precio unitario
+                precio_node = line.find(".//{*}PriceAmount")
+
+                if precio_node is not None and precio_node.text:
+                    try:
+                        precio_valor = float(precio_node.text)
+                    except:
+                        precio_valor = 0
+
 
         try:
             cantidad_valor = float(cantidad.text)
         except:
             cantidad_valor = 1
+
 
         items.append({
             "producto": nombre_producto,
