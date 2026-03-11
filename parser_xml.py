@@ -1,3 +1,5 @@
+# parser_xml.py
+
 import xml.etree.ElementTree as ET
 
 
@@ -81,30 +83,30 @@ def leer_factura(xml_file):
 
         precio_valor = 0
 
-        # 1️⃣ subtotal línea (correcto para la mayoría)
-        subtotal_node = line.find(".//{*}LineExtensionAmount")
+        # 1️⃣ POS supermercados (D1, Ara, etc.)
+        precio_node = line.find(".//{*}Note[@languageLocaleID='linea1']")
 
-        if subtotal_node is not None and subtotal_node.text:
+        if precio_node is not None and precio_node.text:
             try:
-                precio_valor = float(subtotal_node.text)
+                precio_valor = float(precio_node.text)
             except:
                 precio_valor = 0
 
         else:
 
-            # 2️⃣ precio unitario
-            precio_node = line.find(".//{*}PriceAmount")
+            # 2️⃣ subtotal línea DIAN
+            subtotal_node = line.find(".//{*}LineExtensionAmount")
 
-            if precio_node is not None and precio_node.text:
+            if subtotal_node is not None and subtotal_node.text:
                 try:
-                    precio_valor = float(precio_node.text)
+                    precio_valor = float(subtotal_node.text)
                 except:
                     precio_valor = 0
 
             else:
 
-                # 3️⃣ fallback POS
-                precio_node = line.find(".//{*}Note[@languageLocaleID='linea1']")
+                # 3️⃣ fallback
+                precio_node = line.find(".//{*}PriceAmount")
 
                 if precio_node is not None and precio_node.text:
                     try:
