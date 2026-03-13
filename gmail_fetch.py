@@ -18,7 +18,6 @@ import io
 # PERMISOS GMAIL
 # ---------------------------------------
 
-# Solo lectura del correo
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 
@@ -29,19 +28,14 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 def conectar_gmail():
     """
     Abre conexión con Gmail usando OAuth2.
-
-    Si ya existe token guardado lo usa.
-    Si no existe abre login de Google.
     """
 
     creds = None
 
-    # Si ya tenemos token guardado
     if os.path.exists("token.json"):
         with open("token.json", "rb") as token:
             creds = pickle.load(token)
 
-    # Si no hay credenciales válidas
     if not creds or not creds.valid:
 
         if creds and creds.expired and creds.refresh_token:
@@ -55,14 +49,61 @@ def conectar_gmail():
 
             creds = flow.run_local_server(port=0, open_browser=False)
 
-        # Guardar token para futuras ejecuciones
         with open("token.json", "wb") as token:
             pickle.dump(creds, token)
 
-    # Crear servicio Gmail
     service = build("gmail", "v1", credentials=creds)
 
     return service
+
+
+# ---------------------------------------
+# FUNCIÓN RECURSIVA PARA BUSCAR ADJUNTOS
+# ---------------------------------------
+
+def _recorrer_partes(parts, msg_id, service, archivos):
+
+    for part in parts:
+
+        filename = part.get("filename")
+
+        if filename:
+
+            filename = filename.lower()
+
+            if filename.endswith(".xml") or filename.endswith(".zip"):
+
+                body = part.get("body", {})
+
+                if "data" in body:
+
+                    data = body["data"]
+
+                else:
+
+                    att_id = body.get("attachmentId")
+
+                    if not att_id:
+                        continue
+
+                    att = service.users().messages().attachments().get(
+                        userId="me",
+                        messageId=msg_id,
+                        id=att_id
+                    ).execute()
+
+                    data = att["data"]
+
+                file_bytes = base64.urlsafe_b64decode(data)
+
+                archivos.append({
+                    "filename": filename,
+                    "data": file_bytes
+                })
+
+        # 👇 CLAVE: buscar adjuntos en niveles internos (correos reenviados)
+        if "parts" in part:
+            _recorrer_partes(part["parts"], msg_id, service, archivos)
 
 
 # ---------------------------------------
@@ -73,10 +114,9 @@ def obtener_adjuntos(service, dias):
 
     """
     Busca correos con adjuntos y devuelve
-    los archivos XML o ZIP encontrados.
+    archivos XML o ZIP encontrados.
     """
 
-    # ⚠️ Cambio clave: buscar cualquier adjunto
     results = service.users().messages().list(
         userId="me",
         q=f"has:attachment newer_than:{dias}d"
@@ -96,43 +136,7 @@ def obtener_adjuntos(service, dias):
         payload = msg.get("payload", {})
         parts = payload.get("parts", [])
 
-        for part in parts:
-
-            filename = part.get("filename")
-
-            if not filename:
-                continue
-
-            filename = filename.lower()
-
-            # Filtrar solo XML o ZIP
-            if not (filename.endswith(".xml") or filename.endswith(".zip")):
-                continue
-
-            body = part.get("body", {})
-
-            if "data" in body:
-
-                data = body["data"]
-
-            else:
-
-                att_id = body.get("attachmentId")
-
-                att = service.users().messages().attachments().get(
-                    userId="me",
-                    messageId=m["id"],
-                    id=att_id
-                ).execute()
-
-                data = att["data"]
-
-            file_bytes = base64.urlsafe_b64decode(data)
-
-            archivos.append({
-                "filename": filename,
-                "data": file_bytes
-            })
+        _recorrer_partes(parts, m["id"], service, archivos)
 
     return archivos
 
@@ -151,16 +155,8 @@ def extraer_xml(archivo):
     filename = archivo["filename"]
     data = archivo["data"]
 
-    # -----------------------------------
-    # SI YA ES XML
-    # -----------------------------------
-
     if filename.endswith(".xml"):
         return data
-
-    # -----------------------------------
-    # SI ES ZIP → BUSCAR XML DENTRO
-    # -----------------------------------
 
     if filename.endswith(".zip"):
 
